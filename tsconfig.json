@@ -1,0 +1,17 @@
+{
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "noEmit": true,
+        "types": ["node"],
+        "baseUrl": ".",
+        "paths": {
+            "@greenhat-services/magpie-core": ["packages/core/src/index.ts"],
+            "@greenhat-services/magpie-browser": ["packages/browser/src/index.ts"],
+            "@greenhat-services/magpie-node": ["packages/node/src/index.ts"],
+            "@greenhat-services/magpie-vue": ["packages/vue/src/index.ts"],
+            "@greenhat-services/magpie-vite-plugin": ["packages/vite-plugin/src/index.ts"]
+        }
+    },
+    "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts"],
+    "exclude": ["packages/nuxt", "**/node_modules", "**/dist"]
+}

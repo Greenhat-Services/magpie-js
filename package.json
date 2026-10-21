@@ -1,0 +1,27 @@
+{
+    "name": "magpie-js",
+    "private": true,
+    "description": "Magpie error tracking and performance monitoring for JavaScript, Vue and Nuxt.",
+    "license": "MIT",
+    "type": "module",
+    "workspaces": [
+        "packages/*",
+        "playground/*"
+    ],
+    "scripts": {
+        "build": "npm run build --workspaces --if-present --workspace=packages/core --workspace=packages/node --workspace=packages/browser --workspace=packages/vue --workspace=packages/vite-plugin --workspace=packages/nuxt",
+        "test": "vitest run",
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "check": "npm run typecheck && npm run test"
+    },
+    "devDependencies": {
+        "@types/node": "^22.0.0",
+        "jsdom": "^26.0.0",
+        "tsup": "^8.5.0",
+        "typescript": "^5.9.3",
+        "vitest": "^3.2.0"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}
