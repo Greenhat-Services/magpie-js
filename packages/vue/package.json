@@ -15,9 +15,12 @@
             "require": "./dist/index.cjs"
         }
     },
-    "files": ["dist"],
+    "files": [
+        "dist"
+    ],
     "scripts": {
-        "build": "tsup"
+        "build": "tsup",
+        "prepack": "npm run build"
     },
     "dependencies": {
         "@greenhat-services/magpie-browser": "^0.1.0"
@@ -29,7 +32,19 @@
         "vue": "^3.5.0",
         "vue-router": "^4.5.0"
     },
-    "publishConfig": { "access": "public" },
-    "repository": { "type": "git", "url": "git+https://github.com/Greenhat-Services/magpie-js.git", "directory": "packages/vue" },
-    "keywords": ["magpie", "error-tracking", "monitoring", "vue", "vue-router"]
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Greenhat-Services/magpie-js.git",
+        "directory": "packages/vue"
+    },
+    "keywords": [
+        "magpie",
+        "error-tracking",
+        "monitoring",
+        "vue",
+        "vue-router"
+    ]
 }

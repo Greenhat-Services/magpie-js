@@ -15,9 +15,12 @@
             "require": "./dist/index.cjs"
         }
     },
-    "files": ["dist"],
+    "files": [
+        "dist"
+    ],
     "scripts": {
-        "build": "tsup"
+        "build": "tsup",
+        "prepack": "npm run build"
     },
     "peerDependencies": {
         "vite": ">=5.0.0"
@@ -28,7 +31,19 @@
     "engines": {
         "node": ">=20"
     },
-    "publishConfig": { "access": "public" },
-    "repository": { "type": "git", "url": "git+https://github.com/Greenhat-Services/magpie-js.git", "directory": "packages/vite-plugin" },
-    "keywords": ["magpie", "vite", "vite-plugin", "sourcemaps", "release"]
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Greenhat-Services/magpie-js.git",
+        "directory": "packages/vite-plugin"
+    },
+    "keywords": [
+        "magpie",
+        "vite",
+        "vite-plugin",
+        "sourcemaps",
+        "release"
+    ]
 }

@@ -15,9 +15,12 @@
             "require": "./dist/index.cjs"
         }
     },
-    "files": ["dist"],
+    "files": [
+        "dist"
+    ],
     "scripts": {
-        "build": "tsup"
+        "build": "tsup",
+        "prepack": "npm run build"
     },
     "dependencies": {
         "@greenhat-services/magpie-core": "^0.1.0"
@@ -25,7 +28,19 @@
     "engines": {
         "node": ">=20"
     },
-    "publishConfig": { "access": "public" },
-    "repository": { "type": "git", "url": "git+https://github.com/Greenhat-Services/magpie-js.git", "directory": "packages/node" },
-    "keywords": ["magpie", "error-tracking", "monitoring", "node", "nitro"]
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Greenhat-Services/magpie-js.git",
+        "directory": "packages/node"
+    },
+    "keywords": [
+        "magpie",
+        "error-tracking",
+        "monitoring",
+        "node",
+        "nitro"
+    ]
 }

@@ -15,11 +15,24 @@
             "require": "./dist/index.cjs"
         }
     },
-    "files": ["dist"],
+    "files": [
+        "dist"
+    ],
     "scripts": {
-        "build": "tsup"
+        "build": "tsup",
+        "prepack": "npm run build"
     },
-    "publishConfig": { "access": "public" },
-    "repository": { "type": "git", "url": "git+https://github.com/Greenhat-Services/magpie-js.git", "directory": "packages/core" },
-    "keywords": ["magpie", "error-tracking", "monitoring"]
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Greenhat-Services/magpie-js.git",
+        "directory": "packages/core"
+    },
+    "keywords": [
+        "magpie",
+        "error-tracking",
+        "monitoring"
+    ]
 }
