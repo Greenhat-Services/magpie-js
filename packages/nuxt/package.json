@@ -1,0 +1,42 @@
+{
+    "name": "@greenhat-services/magpie-nuxt",
+    "version": "0.1.0",
+    "description": "Magpie error tracking and performance monitoring for Nuxt: browser, Nitro server, source maps and releases.",
+    "license": "MIT",
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./dist/types.d.mts",
+            "import": "./dist/module.mjs"
+        },
+        "./runtime/*": "./dist/runtime/*"
+    },
+    "main": "./dist/module.mjs",
+    "types": "./dist/types.d.mts",
+    "files": ["dist"],
+    "scripts": {
+        "build": "nuxt-module-build build",
+        "prepare": "nuxt-module-build build --stub || true"
+    },
+    "dependencies": {
+        "@greenhat-services/magpie-core": "^0.1.0",
+        "@greenhat-services/magpie-node": "^0.1.0",
+        "@greenhat-services/magpie-vite-plugin": "^0.1.0",
+        "@greenhat-services/magpie-vue": "^0.1.0",
+        "@nuxt/kit": "^4.0.0"
+    },
+    "peerDependencies": {
+        "nuxt": "^3.14.0 || ^4.0.0"
+    },
+    "devDependencies": {
+        "@nuxt/module-builder": "^1.0.0",
+        "@nuxt/schema": "^4.0.0",
+        "nuxt": "^4.0.0"
+    },
+    "engines": {
+        "node": ">=20"
+    },
+    "publishConfig": { "access": "public" },
+    "repository": { "type": "git", "url": "git+https://github.com/Greenhat-Services/magpie-js.git", "directory": "packages/nuxt" },
+    "keywords": ["magpie", "nuxt", "nuxt-module", "error-tracking", "monitoring"]
+}

@@ -126,6 +126,33 @@ describe('captureException', () => {
     });
 });
 
+describe('options that are not numbers', () => {
+    // Framework runtime config can turn an unset number into '' or null. That must mean "the default", not "drop everything".
+    it.each([['empty string', ''], ['null', null], ['undefined', undefined], ['NaN', Number.NaN], ['text', 'lots']])('an unusable sampleRate (%s) means the default of 1', async (_name, value) => {
+        const { client, transport } = make({ sampleRate: value });
+
+        expect(client.captureException(boom('with a bad rate'))).toBeDefined();
+        await client.flush();
+        expect(transport.events).toHaveLength(1);
+    });
+
+    it('reads numbers that arrive as text, and keeps rates between 0 and 1', () => {
+        expect(make({ sampleRate: '0.5' }).client.options.sampleRate).toBe(0.5);
+        expect(make({ sampleRate: 7 }).client.options.sampleRate).toBe(1);
+        expect(make({ sampleRate: -3 }).client.options.sampleRate).toBe(0);
+        expect(make({ tracesSampleRate: '' }).client.options.tracesSampleRate).toBe(0);
+        expect(make({ maxEventsPerMinute: '' }).client.options.maxEventsPerMinute).toBe(30);
+    });
+
+    it('says why an event was dropped when debug is on', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const { client } = make({ debug: true, sampleRate: 0 });
+
+        expect(client.captureException(boom())).toBeUndefined();
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('Event not sent: sampled out (sampleRate 0)'), '');
+        warn.mockRestore();
+    });
+});
 describe('flood control', () => {
     beforeEach(() => vi.useFakeTimers());
     afterEach(() => vi.useRealTimers());

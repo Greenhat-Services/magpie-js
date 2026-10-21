@@ -28,6 +28,13 @@ export interface Runtime {
     request?(): MagpieEvent['request'] | undefined;
 }
 
+/** `value` as a number between `min` and `max`, or `fallback` when it is not a real number. */
+function number(value: unknown, fallback: number, min: number, max: number): number {
+    const n = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
+
+    return typeof n === 'number' && Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+}
+
 const DEDUPE_WINDOW_MS = 5_000;
 const DEFAULT_MAX_EVENTS_PER_MINUTE = 30;
 const MAX_TRANSACTIONS_PER_MINUTE = 60;
@@ -57,12 +64,22 @@ export class Client {
     private teardowns: Array<() => void> = [];
 
     constructor(options: Options, readonly runtime: Runtime) {
-        this.options = options;
+        // Options can arrive from config files, environment variables and framework runtime config, where an unset
+        // number is often an empty string or null. A rate that is not a number falls back to its default instead of
+        // silently dropping everything ('' < 1 is true).
+        this.options = {
+            ...options,
+            sampleRate: number(options.sampleRate, 1, 0, 1),
+            tracesSampleRate: number(options.tracesSampleRate, 0, 0, 1),
+            maxEventsPerMinute: number(options.maxEventsPerMinute, DEFAULT_MAX_EVENTS_PER_MINUTE, 0, Infinity),
+            maxBreadcrumbs: number(options.maxBreadcrumbs, 100, 0, 1000),
+        };
         this.dsn = parseDsn(options.dsn);
         this.inApp = options.inApp ?? defaultInApp;
         this.transport = options.transport ?? (this.dsn ? runtime.createTransport(this.dsn) : null);
 
         if (options.dsn && !this.dsn && !options.transport) this.log('The DSN is not valid, so Magpie is disabled. Expected https://<key>@<host>/<project>.');
+        else if (this.enabled) this.log(`Started${this.dsn ? ` for ${this.dsn.origin}, project ${this.dsn.project}` : ''}, release ${options.release ?? '(none)'}, environment ${options.environment ?? '(none)'}.`);
     }
 
     get enabled(): boolean {
@@ -74,15 +91,15 @@ export class Client {
     /** @returns The event id, or undefined when the event was dropped (disabled, sampled out, ignored, duplicate, over the rate limit). */
     captureException(exception: unknown, hint: EventHint = {}): string | undefined {
         try {
-            if (!this.enabled) return undefined;
-            if (typeof exception === 'object' && exception !== null && this.reported.has(exception)) return undefined;
+            if (!this.enabled) return this.dropped('Magpie is disabled (no valid DSN, or enabled: false)');
+            if (typeof exception === 'object' && exception !== null && this.reported.has(exception)) return this.dropped('this error object was already reported');
 
             const mechanism: Mechanism = hint.mechanism ?? { type: 'generic', handled: true };
             const { values, extra } = exceptionValues(exception, { mechanism, inApp: this.inApp });
             const thrown = values[values.length - 1];
             const frames = thrown?.stacktrace?.frames ?? [];
 
-            if (this.isIgnored(thrown?.type, thrown?.value, frames.map((f) => f.filename))) return undefined;
+            if (this.isIgnored(thrown?.type, thrown?.value, frames.map((f) => f.filename))) return this.dropped(`the error matches ignoreErrors, denyUrls or allowUrls: ${thrown?.type}: ${thrown?.value}`);
 
             const event = this.baseEvent({ exception: { values }, level: 'error', ...(extra ? { extra } : {}) });
             const top = frames[frames.length - 1];
@@ -288,9 +305,11 @@ export class Client {
 
     private process(event: MagpieEvent, hint: EventHint, dedupeKey: string): string | undefined {
         const rate = this.options.sampleRate ?? 1;
-        if (rate < 1 && !(rate > 0 && Math.random() < rate)) return undefined;
-        if (this.isDuplicate(dedupeKey)) return undefined;
-        if (Date.now() < this.blockedUntil || !this.withinRate(this.sentAt, this.options.maxEventsPerMinute ?? DEFAULT_MAX_EVENTS_PER_MINUTE)) return undefined;
+        const cap = this.options.maxEventsPerMinute ?? DEFAULT_MAX_EVENTS_PER_MINUTE;
+        if (rate < 1 && !(rate > 0 && Math.random() < rate)) return this.dropped(`sampled out (sampleRate ${rate})`);
+        if (this.isDuplicate(dedupeKey)) return this.dropped('the same error was reported in the last 5 seconds');
+        if (Date.now() < this.blockedUntil) return this.dropped('Magpie asked us to slow down (HTTP 429), so events are paused');
+        if (!this.withinRate(this.sentAt, cap)) return this.dropped(`more than ${cap} events in a minute`);
 
         this.scope.applyTo(event);
         if (event.extra) event.extra = scrubData(normalize(event.extra) as Record<string, unknown>);
@@ -298,7 +317,7 @@ export class Client {
 
         let result: MagpieEvent | null = event;
         if (this.options.beforeSend) result = this.options.beforeSend(event, hint);
-        if (!result) return undefined;
+        if (!result) return this.dropped('beforeSend returned null');
 
         this.deliver(result);
 
@@ -356,6 +375,13 @@ export class Client {
         sent.push(now);
 
         return true;
+    }
+
+    /** Says why an event was not sent, when `debug` is on, and returns undefined for the caller to return. */
+    private dropped(reason: string): undefined {
+        this.log(`Event not sent: ${reason}.`);
+
+        return undefined;
     }
 
     private log(message: string, error?: unknown): void {

@@ -5,7 +5,7 @@ import { type Exec, recentCommits, resolveRelease } from './release';
 import { type MapFile, recordRelease, uploadSourceMaps } from './upload';
 
 export { recentCommits, resolveRelease } from './release';
-export { recordRelease, uploadSourceMaps } from './upload';
+export { recordRelease, uploadSourceMaps, type MapFile } from './upload';
 
 export interface MagpiePluginOptions {
     /** The app's DSN (`https://<key>@<host>/<project>`), used to find where to upload. Falls back to `MAGPIE_DSN`. */
@@ -138,7 +138,7 @@ export function magpie(options: MagpiePluginOptions = {}): Plugin {
     };
 }
 
-function parseDsn(dsn: string | undefined): { origin: string; project: string } | null {
+export function parseDsn(dsn: string | undefined): { origin: string; project: string } | null {
     const m = /^(https?):\/\/[^@/\s:]+@([^/\s]+)\/(\d+)\/?$/i.exec((dsn ?? '').trim());
 
     return m ? { origin: `${m[1].toLowerCase()}://${m[2]}`, project: m[3] } : null;

@@ -18,7 +18,8 @@ export interface RouterLike {
  * than one per id. Falls back to the route's name, then to its path.
  */
 export function routeName(route: RouteLike): string {
-    const pattern = route.matched[route.matched.length - 1]?.path;
+    // Nuxt's file routes come out as `/users/:id()`; the empty group says nothing, so it is dropped.
+    const pattern = route.matched[route.matched.length - 1]?.path?.replace(/\(\)/g, '');
 
     return pattern || (typeof route.name === 'string' ? route.name : '') || route.path;
 }

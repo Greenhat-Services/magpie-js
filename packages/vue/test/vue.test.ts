@@ -196,6 +196,7 @@ describe('describeErrorSite', () => {
 describe('routeName', () => {
     it('prefers the full pattern, then the route name, then the path', () => {
         expect(routeName({ path: '/users/7', matched: [{ path: '/users' }, { path: '/users/:id' }] })).toBe('/users/:id');
+        expect(routeName({ path: '/users/7', matched: [{ path: '/users/:id()' }] })).toBe('/users/:id');
         expect(routeName({ path: '/x', name: 'named', matched: [] })).toBe('named');
         expect(routeName({ path: '/plain', matched: [] })).toBe('/plain');
     });

@@ -1,0 +1,16 @@
+{
+    "name": "nuxt-app-playground",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "nuxt dev",
+        "build": "nuxt build",
+        "preview": "node .output/server/index.mjs"
+    },
+    "dependencies": {
+        "@greenhat-services/magpie-nuxt": "*",
+        "nuxt": "^4.0.0",
+        "vue": "^3.5.0",
+        "vue-router": "^4.5.0"
+    }
+}
