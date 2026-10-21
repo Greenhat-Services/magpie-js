@@ -258,6 +258,60 @@ describe('httpIntegration', () => {
         expect(client.activeTransaction.spans).toHaveLength(0);
     });
 
+    describe('an API whose CORS policy refuses the trace header', () => {
+        // The browser rejects the whole request with a TypeError when the preflight does not allow a header.
+        const refusing = (host: string) => {
+            fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
+                if (String(input).includes(host) && new Headers(init?.headers).has('magpie-trace')) throw new TypeError('Failed to fetch');
+
+                return new Response('{}', { status: 200 });
+            });
+        };
+        const sentHeader = (call: number) => new Headers(((fetchMock.mock.calls[call] as unknown[])[1] as RequestInit | undefined)?.headers).has('magpie-trace');
+
+        const start2 = (host: string) => {
+            const { client } = track(start([httpIntegration()], { tracesSampleRate: 1, tracePropagationTargets: [host], debug: true }));
+            client.activeTransaction = client.startTransaction({ name: '/home' });
+
+            return client;
+        };
+
+        it('retries a GET once without the header so the app still gets its response, and remembers the host', async () => {
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+            refusing('strict-get.example.com');
+            start2('strict-get.example.com');
+
+            const response = await window.fetch('https://strict-get.example.com/data');
+            expect(response.status).toBe(200);
+            expect([sentHeader(0), sentHeader(1)]).toEqual([true, false]);
+
+            await window.fetch('https://strict-get.example.com/more');
+            expect(sentHeader(2)).toBe(false);
+            expect(warn).toHaveBeenCalledWith(expect.stringContaining('strict-get.example.com rejected the magpie-trace header'));
+            warn.mockRestore();
+        });
+
+        it('does not repeat a POST, which could happen twice, but stops sending the header to that host', async () => {
+            vi.spyOn(console, 'warn').mockImplementation(() => {});
+            refusing('strict-post.example.com');
+            start2('strict-post.example.com');
+
+            await expect(window.fetch('https://strict-post.example.com/orders', { method: 'POST', body: '{}' })).rejects.toThrow('Failed to fetch');
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+
+            const next = await window.fetch('https://strict-post.example.com/orders', { method: 'POST', body: '{}' });
+            expect(next.status).toBe(200);
+            expect(sentHeader(1)).toBe(false);
+        });
+
+        it('leaves a same-origin failure alone: that is the network, not CORS', async () => {
+            fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+            start2('ignored.example.com');
+
+            await expect(window.fetch('/api/x')).rejects.toThrow('Failed to fetch');
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+        });
+    });
     it('restores fetch when the client is closed', async () => {
         const { client } = start([httpIntegration()]);
         const patched = window.fetch;

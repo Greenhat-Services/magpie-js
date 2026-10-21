@@ -17,7 +17,6 @@ const COMMIT_ENV = [
     'SOURCE_VERSION',
     'BITBUCKET_COMMIT',
     'CIRCLE_SHA1',
-    'LARAVEL_CLOUD_COMMIT_HASH',
 ];
 
 /**

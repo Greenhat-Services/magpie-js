@@ -1,6 +1,9 @@
 import { type Client, formatTraceHeader, type Integration, scrubUrl, TRACE_HEADER, type Span } from '@greenhat-services/magpie-core';
 import { idleFor } from './idle';
 
+/** Hosts that refused the trace header. Module-level, so the knowledge outlives one client (hot reload, re-init). */
+const refusedHosts = new Set<string>();
+
 interface RequestInfo {
     method: string;
     url: string;
@@ -30,7 +33,10 @@ export function httpIntegration(): Integration {
                     const info = describe(input, init);
                     if (skip(info.url)) return original.call(this, input, init);
 
-                    const call = begin(client, info);
+                    const crossOrigin = !sameOrigin(absolute(info.url));
+                    const host = hostOf(info.url);
+                    // A host that refused the header once is not sent it again.
+                    const call = begin(client, info, crossOrigin && refusedHosts.has(host));
                     let args: [Parameters<typeof fetch>[0], RequestInit | undefined] = [input, init];
 
                     if (call.header) {
@@ -39,17 +45,28 @@ export function httpIntegration(): Integration {
                         args = [input, { ...init, headers }];
                     }
 
-                    return original.apply(this, args).then(
-                        (response) => {
-                            call.finish(response.status);
+                    const done = (response: Response) => {
+                        call.finish(response.status);
 
-                            return response;
-                        },
-                        (error) => {
-                            call.finish(0);
-                            throw error;
-                        },
-                    );
+                        return response;
+                    };
+                    const fail = (error: unknown): never => {
+                        call.finish(0);
+                        throw error;
+                    };
+
+                    return original.apply(this, args).then(done, (error) => {
+                        // A cross-origin API whose CORS policy does not allow our header rejects the whole request,
+                        // which would break the app's own call. Stop sending it to that host. A GET or HEAD can be asked
+                        // again without it, since asking twice changes nothing; anything else cannot be repeated safely.
+                        if (call.header && crossOrigin && error instanceof TypeError) {
+                            refusedHosts.add(host);
+                            if (client.options.debug) console.warn(`[magpie] ${host} rejected the ${TRACE_HEADER} header (its CORS policy does not allow it), so it will not be sent there again. Remove it from tracePropagationTargets, or allow the header on that API.`);
+                            if (info.method === 'GET' || info.method === 'HEAD') return original.call(this, input, init).then(done, fail);
+                        }
+
+                        return fail(error);
+                    });
                 } as typeof fetch;
 
                 restore.push(() => {
@@ -99,7 +116,7 @@ export function httpIntegration(): Integration {
 }
 
 /** Starts the breadcrumb timer, the span and the trace header for one request. */
-function begin(client: Client, info: RequestInfo): { header: string | undefined; finish: (status: number) => void } {
+function begin(client: Client, info: RequestInfo, withholdHeader = false): { header: string | undefined; finish: (status: number) => void } {
     const started = performance.now();
     const parent = client.activeTransaction;
     const idle = parent ? idleFor(parent) : undefined;
@@ -116,7 +133,7 @@ function begin(client: Client, info: RequestInfo): { header: string | undefined;
     // The header names the request's own span, so the server's transaction is its child. Sent to same-origin
     // requests, and to the hosts listed in `tracePropagationTargets`, so third parties never see it.
     const target = absolute(info.url);
-    const header = tracing && parent && (sameOrigin(target) || client.shouldPropagate(target))
+    const header = !withholdHeader && tracing && parent && (sameOrigin(target) || client.shouldPropagate(target))
         ? formatTraceHeader(parent.traceId, span?.spanId ?? parent.spanId, parent.sampled)
         : undefined;
 
@@ -154,6 +171,14 @@ function describe(input: Parameters<typeof fetch>[0], init?: RequestInit): Reque
 function absolute(url: string): string {
     try {
         return new URL(url, location.href).href;
+    } catch {
+        return url;
+    }
+}
+
+function hostOf(url: string): string {
+    try {
+        return new URL(url, location.href).host;
     } catch {
         return url;
     }

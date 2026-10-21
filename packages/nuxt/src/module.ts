@@ -47,6 +47,7 @@ export interface ModuleOptions {
 }
 
 export interface PublicConfig {
+    /** Empty when none was known at build time; then NUXT_PUBLIC_MAGPIE_DSN supplies it at runtime. */
     dsn: string;
     environment: string;
     release?: string;
@@ -66,13 +67,12 @@ export default defineNuxtModule<ModuleOptions>({
 
     setup(options, nuxt) {
         const logger = useLogger('magpie');
-        const dsn = options.dsn ?? process.env.MAGPIE_DSN;
+        // The DSN used at build time, for the source map upload. It does not have to exist: one build can be deployed to
+        // several environments, each setting NUXT_PUBLIC_MAGPIE_DSN when it runs. Nuxt only lets an environment
+        // variable override a key that was declared at build time, so the key is always declared, empty or not.
+        const dsn = options.dsn ?? process.env.MAGPIE_DSN ?? '';
 
-        if (!dsn) {
-            logger.warn('No DSN (the `magpie.dsn` option or MAGPIE_DSN), so Magpie is switched off.');
-
-            return;
-        }
+        if (!dsn) logger.info('No DSN at build time (the `magpie.dsn` option or MAGPIE_DSN). Set NUXT_PUBLIC_MAGPIE_DSN when the app runs. Source maps are not uploaded.');
 
         if (nuxt.options.dev && !options.dev) return;
 
@@ -82,20 +82,21 @@ export default defineNuxtModule<ModuleOptions>({
 
         // The DSN is public by design (it ships in every bundle), so runtime config is the right place for it. The auth
         // token is not, and never goes here.
+        // Every scalar has a value, so each can be overridden by a NUXT_PUBLIC_MAGPIE_* variable at runtime. The lists
+        // stay out when unset: an undefined value can reach the browser as an empty string.
         const publicConfig: PublicConfig = {
             dsn,
             environment,
-            release,
-            tracesSampleRate: options.tracesSampleRate,
-            sampleRate: options.sampleRate,
-            sendDefaultPii: options.sendDefaultPii,
-            debug: options.debug,
+            release: release ?? '',
+            tracesSampleRate: options.tracesSampleRate ?? 0,
+            sampleRate: options.sampleRate ?? 1,
+            sendDefaultPii: options.sendDefaultPii ?? false,
+            debug: options.debug ?? false,
             ignoreErrors: options.ignoreErrors,
             tracePropagationTargets: options.tracePropagationTargets,
             client: options.client !== false,
             server: options.server !== false,
         };
-        // Unset options are left out: an undefined value can reach the browser as an empty string.
         const defined = Object.fromEntries(Object.entries(publicConfig).filter(([, value]) => value !== undefined));
         (nuxt.options.runtimeConfig.public as Record<string, unknown>).magpie = { ...(nuxt.options.runtimeConfig.public.magpie as object | undefined), ...defined };
 
@@ -109,7 +110,8 @@ export default defineNuxtModule<ModuleOptions>({
         addImports(['captureException', 'captureMessage', 'addBreadcrumb', 'setUser', 'setTag', 'setTags', 'setExtra', 'setContext', 'startSpan', 'withScope'].map((name) => ({ name, from: '@greenhat-services/magpie-core' })));
 
         // Source maps: written but not referenced by the bundle (`hidden`), so they can be uploaded and then removed.
-        if (!nuxt.options.dev && options.sourcemaps?.enabled !== false) {
+        // Uploading needs to know where, which is the DSN at build time.
+        if (dsn && !nuxt.options.dev && options.sourcemaps?.enabled !== false) {
             const sourcemap = nuxt.options.sourcemap as { client?: boolean | 'hidden'; server?: boolean | 'hidden' };
             if (!sourcemap.client) sourcemap.client = 'hidden';
 
