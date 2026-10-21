@@ -19,7 +19,7 @@ export function parseUserAgent(ua: string): Agent {
         ['Opera', /\bOPR\/([\d.]+)/],
         ['Samsung Internet', /\bSamsungBrowser\/([\d.]+)/],
         ['Firefox', /\b(?:Firefox|FxiOS)\/([\d.]+)/],
-        ['Chrome', /\b(?:Chrome|CriOS)\/([\d.]+)/],
+        ['Chrome', /\b(?:Headless)?(?:Chrome|Chromium|CriOS)\/([\d.]+)/],
         ['Safari', /\bVersion\/([\d.]+).*\bSafari\//],
     ];
     for (const [name, re] of rules) {

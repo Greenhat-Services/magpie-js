@@ -20,6 +20,8 @@ describe('parseUserAgent', () => {
         ['Chrome on Android phone', 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36', 'Chrome 155 / Android 14 / mobile'],
         ['Chrome on an Android tablet', 'Mozilla/5.0 (Linux; Android 13; SM-X700) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', 'Chrome 150 / Android 13 / tablet'],
         ['Samsung Internet', 'Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/24.0 Chrome/117.0.0.0 Mobile Safari/537.36', 'Samsung Internet 24 / Android 14 / mobile'],
+        ['Headless Chrome (Playwright, Puppeteer)', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36', 'Chrome 156 / Windows 10 / desktop'],
+        ['Chromium on Linux', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/130.0.0.0 Chrome/130.0.0.0 Safari/537.36', 'Chrome 130 / Linux / desktop'],
         ['Chrome on Linux', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 'Chrome 155 / Linux / desktop'],
     ])('%s', (_name, ua, expected) => {
         expect(agent(ua)).toBe(expected);

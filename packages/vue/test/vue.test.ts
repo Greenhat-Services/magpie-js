@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp, defineComponent, h } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
-import { getClient, init, type MagpieEvent, type Payload, routeName, type TransactionEvent, type Transport } from '../src';
+import { describeErrorSite, getClient, init, type MagpieEvent, type Payload, routeName, type TransactionEvent, type Transport } from '../src';
 
 class FakeTransport implements Transport {
     payloads: Payload[] = [];
@@ -180,6 +180,16 @@ describe('routerTracing', () => {
         const value = transport.events[0].exception!.values[0];
         expect(value.value).toBe('Failed to fetch dynamically imported module');
         expect(value.mechanism).toEqual({ type: 'vue-router', handled: true });
+    });
+});
+
+describe('describeErrorSite', () => {
+    it('turns the link Vue passes in production back into words, and leaves anything else alone', () => {
+        expect(describeErrorSite('https://vuejs.org/error-reference/#runtime-5')).toBe('native event handler');
+        expect(describeErrorSite('https://vuejs.org/error-reference/#runtime-0')).toBe('setup function');
+        expect(describeErrorSite('https://vuejs.org/error-reference/#runtime-m')).toBe('mounted hook');
+        expect(describeErrorSite('https://vuejs.org/error-reference/#runtime-99')).toBe('https://vuejs.org/error-reference/#runtime-99');
+        expect(describeErrorSite('setup function')).toBe('setup function');
     });
 });
 

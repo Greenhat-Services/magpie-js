@@ -22,6 +22,27 @@ export function componentName(instance: ComponentPublicInstance | null | undefin
     return options.name || options.__name || file || 'Anonymous';
 }
 
+/**
+ * Vue's names for where an error happened. Development builds pass these as words; production builds pass a link
+ * (`https://vuejs.org/error-reference/#runtime-5`) to save bytes, so the code is turned back into the words here.
+ * Numbering is Vue 3.5's `ErrorCodes`; an unknown code is kept as given.
+ */
+const VUE_ERROR_SITES: Record<string, string> = {
+    sp: 'serverPrefetch hook', bc: 'beforeCreate hook', c: 'created hook', bm: 'beforeMount hook', m: 'mounted hook',
+    bu: 'beforeUpdate hook', u: 'updated hook', bum: 'beforeUnmount hook', um: 'unmounted hook', a: 'activated hook',
+    da: 'deactivated hook', ec: 'errorCaptured hook', rtc: 'renderTracked hook', rtg: 'renderTriggered hook',
+    '0': 'setup function', '1': 'render function', '2': 'watcher getter', '3': 'watcher callback', '4': 'watcher cleanup function',
+    '5': 'native event handler', '6': 'component event handler', '7': 'vnode hook', '8': 'directive hook', '9': 'transition hook',
+    '10': 'app errorHandler', '11': 'app warnHandler', '12': 'ref function', '13': 'async component loader', '14': 'scheduler flush',
+    '15': 'component update', '16': 'app unmount cleanup function',
+};
+
+export function describeErrorSite(info: string): string {
+    const code = /#runtime-([a-z0-9]+)$/i.exec(info)?.[1];
+
+    return (code && VUE_ERROR_SITES[code]) || info;
+}
+
 /** Reports an error Vue caught, with the component it came from and the lifecycle step it was in ("setup function", "event handler"). */
 export function captureVueError(error: unknown, instance: ComponentPublicInstance | null | undefined, info: string): void {
     const client = getClient();
@@ -31,7 +52,7 @@ export function captureVueError(error: unknown, instance: ComponentPublicInstanc
         const file = (instance?.$options as { __file?: string } | undefined)?.__file;
         scope.setContext('vue', {
             componentName: componentName(instance),
-            lifecycleHook: info,
+            lifecycleHook: describeErrorSite(info),
             hierarchy: componentHierarchy(instance).join(' > '),
             ...(file ? { file: file.split(/[\\/]/).slice(-3).join('/') } : {}),
         });

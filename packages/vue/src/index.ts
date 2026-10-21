@@ -4,7 +4,7 @@ import { attachErrorHandler } from './errorHandler';
 import { type RouterLike, routerTracing } from './router';
 
 export * from '@greenhat-services/magpie-browser';
-export { attachErrorHandler, captureVueError, componentHierarchy, componentName } from './errorHandler';
+export { attachErrorHandler, captureVueError, componentHierarchy, componentName, describeErrorSite } from './errorHandler';
 export { routeName, routerTracing, type RouteLike, type RouterLike } from './router';
 
 export const VUE_SDK_NAME = 'magpie.javascript.vue';
