@@ -8,7 +8,7 @@ import { defineNuxtPlugin, useRouter, useRuntimeConfig } from '#imports';
 export default defineNuxtPlugin({
     name: 'magpie:client',
     setup(nuxtApp) {
-        const config = useRuntimeConfig().public.magpie as import('../module').PublicConfig | undefined;
+        const config = useRuntimeConfig().public.magpie as import('./types').PublicConfig | undefined;
         if (!config?.dsn) return;
 
         init({

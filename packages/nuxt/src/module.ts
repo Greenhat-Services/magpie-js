@@ -1,7 +1,10 @@
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import type { PublicConfig } from './runtime/types';
 import { addImports, addPlugin, addServerPlugin, addVitePlugin, createResolver, defineNuxtModule, useLogger } from '@nuxt/kit';
 import { type MapFile, magpie as magpieVitePlugin, parseDsn, resolveRelease, uploadSourceMaps } from '@greenhat-services/magpie-vite-plugin';
+
+export type { PublicConfig } from './runtime/types';
 
 export interface ModuleOptions {
     /** `https://<key>@<host>/<project>`. Falls back to `MAGPIE_DSN`. Without one the module does nothing. */
@@ -44,21 +47,6 @@ export interface ModuleOptions {
     };
     /** Fail the build when an upload fails. Default false. */
     failOnError?: boolean;
-}
-
-export interface PublicConfig {
-    /** Empty when none was known at build time; then NUXT_PUBLIC_MAGPIE_DSN supplies it at runtime. */
-    dsn: string;
-    environment: string;
-    release?: string;
-    tracesSampleRate?: number;
-    sampleRate?: number;
-    sendDefaultPii?: boolean;
-    debug?: boolean;
-    ignoreErrors?: string[];
-    tracePropagationTargets?: string[];
-    client: boolean;
-    server: boolean;
 }
 
 export default defineNuxtModule<ModuleOptions>({

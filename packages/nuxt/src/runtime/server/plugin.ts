@@ -11,7 +11,7 @@ const STATIC_ASSET = /^\/(_nuxt|__nuxt)|\.(js|mjs|css|map|png|jpe?g|gif|svg|ico|
  * reported with the request attached. Cookies and authorization headers are never sent.
  */
 export default defineNitroPlugin((nitroApp) => {
-    const config = useRuntimeConfig().public.magpie as import('../../module').PublicConfig | undefined;
+    const config = useRuntimeConfig().public.magpie as import('../types').PublicConfig | undefined;
     if (!config?.dsn || config.server === false) return;
 
     const client = init({
