@@ -113,6 +113,8 @@ export interface Options {
     enabled?: boolean;
     debug?: boolean;
     environment?: string;
+    /** Environments that send nothing, compared without regard to case. Default `['local']`; pass `[]` to send from every environment. */
+    disabledEnvironments?: string[];
     /** Must equal the version the build uploaded its source maps under, or frames stay minified. */
     release?: string;
     serverName?: string;

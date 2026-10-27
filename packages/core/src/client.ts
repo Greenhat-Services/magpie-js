@@ -40,6 +40,8 @@ const DEFAULT_MAX_EVENTS_PER_MINUTE = 30;
 const MAX_TRANSACTIONS_PER_MINUTE = 60;
 const DEFAULT_RETRY_AFTER_S = 60;
 const MAX_STRING = 8192;
+/** Environments that send nothing unless `disabledEnvironments` says otherwise: a developer's machine is noise in Magpie. */
+const DEFAULT_DISABLED_ENVIRONMENTS = ['local'];
 
 /**
  * Builds events, applies the scope and the options, and hands them to a transport. It never throws into the host
@@ -53,6 +55,7 @@ export class Client {
     activeTransaction: Transaction | undefined;
 
     private readonly transport: Transport | null;
+    private readonly environmentDisabled: boolean;
     private readonly inApp: (filename: string) => boolean;
     private readonly pending = new Set<Promise<unknown>>();
     private readonly recent = new Map<string, number>();
@@ -78,12 +81,17 @@ export class Client {
         this.inApp = options.inApp ?? defaultInApp;
         this.transport = options.transport ?? (this.dsn ? runtime.createTransport(this.dsn) : null);
 
-        if (options.dsn && !this.dsn && !options.transport) this.log('The DSN is not valid, so Magpie is disabled. Expected https://<key>@<host>/<project>.');
+        const disabled = Array.isArray(options.disabledEnvironments) ? options.disabledEnvironments : DEFAULT_DISABLED_ENVIRONMENTS;
+        const environment = typeof options.environment === 'string' ? options.environment.toLowerCase() : '';
+        this.environmentDisabled = environment !== '' && disabled.some((name) => String(name).toLowerCase() === environment);
+
+        if (this.environmentDisabled) this.log(`Magpie is disabled in the "${options.environment}" environment. Change disabledEnvironments to send from it.`);
+        else if (options.dsn && !this.dsn && !options.transport) this.log('The DSN is not valid, so Magpie is disabled. Expected https://<key>@<host>/<project>.');
         else if (this.enabled) this.log(`Started${this.dsn ? ` for ${this.dsn.origin}, project ${this.dsn.project}` : ''}, release ${options.release ?? '(none)'}, environment ${options.environment ?? '(none)'}.`);
     }
 
     get enabled(): boolean {
-        return this.options.enabled !== false && this.transport !== null;
+        return this.options.enabled !== false && this.transport !== null && !this.environmentDisabled;
     }
 
     // ------------------------------------------------------------------ errors

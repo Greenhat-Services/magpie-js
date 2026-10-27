@@ -376,3 +376,31 @@ describe('tracing', () => {
         expect(client.shouldPropagate('https://third-party.com/z')).toBe(false);
     });
 });
+
+describe('disabled environments', () => {
+    it('sends nothing from the local environment by default', () => {
+        const { client, transport } = make({ environment: 'local' });
+
+        expect(client.enabled).toBe(false);
+        expect(client.captureException(boom())).toBeUndefined();
+        expect(transport.payloads).toHaveLength(0);
+    });
+
+    it('ignores case when matching', () => {
+        expect(make({ environment: 'Local' }).client.enabled).toBe(false);
+        expect(make({ environment: 'production', disabledEnvironments: ['PRODUCTION'] }).client.enabled).toBe(false);
+    });
+
+    it('still sends from other environments, and from one with no name', () => {
+        expect(make({ environment: 'staging' }).client.enabled).toBe(true);
+        expect(make({ environment: undefined }).client.enabled).toBe(true);
+    });
+
+    it('lets an empty list send from every environment', () => {
+        const { client, transport } = make({ environment: 'local', disabledEnvironments: [] });
+
+        expect(client.enabled).toBe(true);
+        client.captureException(boom());
+        expect(transport.payloads).toHaveLength(1);
+    });
+});
