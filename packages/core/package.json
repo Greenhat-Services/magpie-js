@@ -1,6 +1,6 @@
 {
     "name": "@greenhat-services/magpie-core",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "Platform-neutral core of the Magpie JavaScript SDKs: events, scope, tracing and the client.",
     "license": "MIT",
     "type": "module",
