@@ -1,6 +1,6 @@
 {
     "name": "@greenhat-services/magpie-browser",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Magpie error tracking and performance monitoring for the browser.",
     "license": "MIT",
     "type": "module",

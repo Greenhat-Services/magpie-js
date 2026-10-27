@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
 
 - Nothing is sent from the `local` environment any more, so a developer's machine stays out of Magpie. Set `disabledEnvironments: []` to send from it, or list others. Applies to every package that uses the core client (browser, Node, Vue and Nuxt).
 - The platform report now finds Vue, Nuxt and the rest when the build does not start in the project folder, which is how Nuxt builds. It looks in the folders above the build root too, so a Nuxt app reports instead of "no known packages are installed under the project root".

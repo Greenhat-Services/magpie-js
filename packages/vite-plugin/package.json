@@ -1,6 +1,6 @@
 {
     "name": "@greenhat-services/magpie-vite-plugin",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Uploads source maps to Magpie, records the release and its commits, and injects the release into your Vite build.",
     "license": "MIT",
     "type": "module",
