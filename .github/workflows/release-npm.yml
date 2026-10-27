@@ -1,0 +1,45 @@
+name: Release npm
+
+on:
+    push:
+        tags: ['v*']
+
+permissions:
+    contents: read
+    id-token: write
+
+jobs:
+    publish:
+        name: Publish to npm
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+                  registry-url: https://registry.npmjs.org
+            - run: npm ci
+            - run: npm run build
+            - run: npm run typecheck
+            - run: npm test
+            - name: Check the tag matches the package versions
+              run: |
+                  version="${GITHUB_REF_NAME#v}"
+                  for pkg in core browser node vue vite-plugin nuxt; do
+                      actual=$(node -p "require('./packages/$pkg/package.json').version")
+                      if [ "$actual" != "$version" ]; then
+                          echo "packages/$pkg is $actual, tag is v$version"
+                          exit 1
+                      fi
+                  done
+            - name: Publish in dependency order
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+                  NPM_CONFIG_PROVENANCE: 'true'
+              run: |
+                  tag=latest
+                  case "$GITHUB_REF_NAME" in *-*) tag=next ;; esac
+                  for pkg in core browser node vue vite-plugin nuxt; do
+                      npm publish -w "packages/$pkg" --tag "$tag"
+                  done
