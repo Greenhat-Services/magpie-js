@@ -2,9 +2,11 @@ import { rm } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import type { Plugin } from 'vite';
 import { type Exec, recentCommits, resolveRelease } from './release';
+import { installedVersions, reportPlatform } from './platform';
 import { type MapFile, recordRelease, uploadSourceMaps } from './upload';
 
 export { recentCommits, resolveRelease } from './release';
+export { installedVersions, PLATFORM_PACKAGES, reportPlatform } from './platform';
 export { recordRelease, uploadSourceMaps, type MapFile } from './upload';
 
 export interface MagpiePluginOptions {
@@ -34,6 +36,13 @@ export interface MagpiePluginOptions {
         /** How many recent commits to send. Default 50. */
         commits?: number;
     };
+    platform?: {
+        /**
+         * Tell Magpie which versions of Vue, Nuxt, Vite and the like this app is built with, so every project's platform
+         * is listed in one place. Versions only. Needs the auth token. Default true.
+         */
+        enabled?: boolean;
+    };
     /** Fail the build when an upload fails. Default false: a Magpie outage should not stop you deploying. */
     failOnError?: boolean;
     disable?: boolean;
@@ -58,6 +67,8 @@ export function magpie(options: MagpiePluginOptions = {}): Plugin {
     const env = options.env ?? process.env;
     let release: string | undefined;
     let deployed = false;
+    let platformReported = false;
+    let root = process.cwd();
 
     const log = (message: string) => console.log(`${PREFIX} ${message}`);
     const warn = (message: string) => console.warn(`${PREFIX} ${message}`);
@@ -74,6 +85,10 @@ export function magpie(options: MagpiePluginOptions = {}): Plugin {
                 ...(config.build?.sourcemap === undefined && options.sourcemaps?.enabled !== false ? { build: { sourcemap: 'hidden' as const } } : {}),
                 ...(release ? { define: { 'import.meta.env.VITE_MAGPIE_RELEASE': JSON.stringify(release) } } : {}),
             };
+        },
+
+        configResolved(config) {
+            root = config.root;
         },
 
         transformIndexHtml() {
@@ -96,6 +111,17 @@ export function magpie(options: MagpiePluginOptions = {}): Plugin {
                 if (options.failOnError) throw new Error(`${PREFIX} ${message}`);
                 warn(message);
             };
+
+            if (dsn && token && options.platform?.enabled !== false && !platformReported) {
+                platformReported = true;
+                const components = await installedVersions(root);
+                const reason = Object.keys(components).length
+                    ? await reportPlatform({ origin: dsn.origin, project: dsn.project, token, environment: options.environment ?? env.MAGPIE_ENVIRONMENT ?? 'production', components, sdk: { name: 'magpie.javascript.vite-plugin' }, fetch: options.fetch })
+                    : 'no known packages are installed under the project root';
+
+                if (reason) warn(`The platform was not reported: ${reason}`);
+                else log(`Reported the platform (${Object.entries(components).map(([name, version]) => `${name} ${version}`).join(', ')}).`);
+            }
 
             if (!release) return warn('No release could be worked out (no MAGPIE_RELEASE, CI commit variable or git checkout), so source maps are not uploaded.');
             if (!dsn) return warn('No DSN (the dsn option or MAGPIE_DSN), so source maps are not uploaded.');

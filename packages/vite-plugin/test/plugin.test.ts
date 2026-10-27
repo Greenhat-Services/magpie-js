@@ -117,7 +117,7 @@ describe('the plugin', () => {
     const exec = () => ['c1\u001fAda\u001f2026-10-20T00:00:00Z\u001fAdd a thing'].join('\n');
 
     const run = async (options: Parameters<typeof magpie>[0], files: string[]) => {
-        const plugin = magpie({ env, exec, ...options });
+        const plugin = magpie({ env, exec, platform: { enabled: false }, ...options });
         const bundle = Object.fromEntries([...files, 'assets/app.js'].map((f) => [f, {}]));
         await (plugin.writeBundle as (this: unknown, o: { dir: string }, b: object) => Promise<void>).call({ environment: { name: 'client' } }, { dir }, bundle);
 
@@ -202,5 +202,31 @@ describe('the plugin', () => {
         const [url, init] = fetchMock.mock.calls[0] as unknown as Call;
         expect(url).not.toContain('mgp_org_secret');
         expect(JSON.stringify([...init.body.entries()].map(([k, v]) => [k, typeof v === 'string' ? v : '(file)']))).not.toContain('mgp_org_secret');
+    });
+
+    it('reports the versions the app is built with, and nothing else, with the token', async () => {
+        await mkdir(join(dir, 'node_modules', 'vue'), { recursive: true });
+        await mkdir(join(dir, 'node_modules', '@sveltejs', 'kit'), { recursive: true });
+        await writeFile(join(dir, 'node_modules', 'vue', 'package.json'), JSON.stringify({ name: 'vue', version: '3.5.13' }));
+        await writeFile(join(dir, 'node_modules', '@sveltejs', 'kit', 'package.json'), JSON.stringify({ name: '@sveltejs/kit', version: '2.8.0' }));
+        const fetchMock = vi.fn(async () => ok());
+
+        const plugin = magpie({ env, exec, deploy: { enabled: false }, sourcemaps: { enabled: false }, fetch: fetchMock as never });
+        (plugin.configResolved as (c: { root: string }) => void)({ root: dir });
+        await (plugin.writeBundle as (this: unknown, o: { dir: string }, b: object) => Promise<void>).call({ environment: { name: 'client' } }, { dir }, {});
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+        expect(url).toBe('https://magpie.test/api/12/platform');
+        expect(init.headers).toMatchObject({ Authorization: 'Bearer mgp_org_secret' });
+        expect(JSON.parse(init.body as string)).toEqual({ environment: 'production', components: { sveltekit: '2.8.0', vue: '3.5.13' }, sdk: { name: 'magpie.javascript.vite-plugin' } });
+    });
+
+    it('does not report the platform when told not to', async () => {
+        const fetchMock = vi.fn(async () => ok());
+
+        await run({ fetch: fetchMock as never, deploy: { enabled: false }, sourcemaps: { enabled: false }, platform: { enabled: false } }, []);
+
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 });
