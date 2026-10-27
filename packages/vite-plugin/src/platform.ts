@@ -1,20 +1,41 @@
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 /** Packages whose installed version Magpie shows, in the order they are listed. Names and versions only. */
 export const PLATFORM_PACKAGES = ['nuxt', 'vue', 'vue-router', 'pinia', 'react', 'next', 'svelte', '@sveltejs/kit', 'vite', 'tailwindcss', 'typescript'] as const;
 
-/** The version of each known package installed under `root`, keyed by the name Magpie shows (`@sveltejs/kit` is `sveltekit`). */
+/** `root` and every directory above it, nearest first: the places Node looks for `node_modules`. */
+function searchPath(root: string): string[] {
+    const dirs: string[] = [];
+
+    for (let dir = resolve(root); ; dir = dirname(dir)) {
+        dirs.push(dir);
+        if (dirname(dir) === dir) return dirs;
+    }
+}
+
+/**
+ * The version of each known package installed at or above `root`, keyed by the name Magpie shows (`@sveltejs/kit` is
+ * `sveltekit`).
+ *
+ * Looks upwards the way Node resolves a package, because Vite's root is not always the project folder: Nuxt builds from
+ * its own folder inside `node_modules/.cache`, and a workspace installs its packages in a parent.
+ */
 export async function installedVersions(root: string, packages: readonly string[] = PLATFORM_PACKAGES): Promise<Record<string, string>> {
     const found: Record<string, string> = {};
+    const dirs = searchPath(root);
 
     await Promise.all(
         packages.map(async (name) => {
-            try {
-                const { version } = JSON.parse(await readFile(join(root, 'node_modules', name, 'package.json'), 'utf8')) as { version?: unknown };
-                if (typeof version === 'string' && version) found[name === '@sveltejs/kit' ? 'sveltekit' : name] = version;
-            } catch {
-                // Not installed here: it is simply not part of this app.
+            for (const dir of dirs) {
+                try {
+                    const { version } = JSON.parse(await readFile(join(dir, 'node_modules', name, 'package.json'), 'utf8')) as { version?: unknown };
+                    if (typeof version === 'string' && version) found[name === '@sveltejs/kit' ? 'sveltekit' : name] = version;
+
+                    return;
+                } catch {
+                    // Not installed here: try the folder above. Nowhere, and it is simply not part of this app.
+                }
             }
         }),
     );

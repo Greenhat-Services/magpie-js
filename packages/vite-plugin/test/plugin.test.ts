@@ -222,6 +222,21 @@ describe('the plugin', () => {
         expect(JSON.parse(init.body as string)).toEqual({ environment: 'production', components: { sveltekit: '2.8.0', vue: '3.5.13' }, sdk: { name: 'magpie.javascript.vite-plugin' } });
     });
 
+    it('finds the packages above the build root, as Nuxt builds from a folder inside node_modules/.cache', async () => {
+        const root = join(dir, 'node_modules', '.cache', 'nuxt', '.nuxt');
+        await mkdir(root, { recursive: true });
+        await mkdir(join(dir, 'node_modules', 'nuxt'), { recursive: true });
+        await writeFile(join(dir, 'node_modules', 'nuxt', 'package.json'), JSON.stringify({ name: 'nuxt', version: '4.6.1' }));
+        const fetchMock = vi.fn(async () => ok());
+
+        const plugin = magpie({ env, exec, deploy: { enabled: false }, sourcemaps: { enabled: false }, fetch: fetchMock as never });
+        (plugin.configResolved as (c: { root: string }) => void)({ root });
+        await (plugin.writeBundle as (this: unknown, o: { dir: string }, b: object) => Promise<void>).call({ environment: { name: 'client' } }, { dir }, {});
+
+        const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+        expect(JSON.parse(init.body as string).components).toEqual({ nuxt: '4.6.1' });
+    });
+
     it('does not report the platform when told not to', async () => {
         const fetchMock = vi.fn(async () => ok());
 
