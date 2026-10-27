@@ -1,6 +1,6 @@
 {
     "name": "@greenhat-services/magpie-nuxt",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Magpie error tracking and performance monitoring for Nuxt: browser, Nitro server, source maps and releases.",
     "license": "MIT",
     "type": "module",
