@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- The build reports which versions of Vue, Nuxt, Vite and a few other well-known packages the app is built with. Versions only, and it can be turned off with `platform: { enabled: false }`.
+
 ## 0.1.0
 
 First release.
