@@ -19,6 +19,8 @@ jobs:
                   node-version: 22
                   cache: npm
                   registry-url: https://registry.npmjs.org
+            - name: Use an npm that supports trusted publishing
+              run: npm install -g npm@^11.5.1
             - run: npm ci
             - run: npm run build
             - run: npm run typecheck
@@ -34,9 +36,6 @@ jobs:
                       fi
                   done
             - name: Publish in dependency order
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-                  NPM_CONFIG_PROVENANCE: 'true'
               run: |
                   tag=latest
                   case "$GITHUB_REF_NAME" in *-*) tag=next ;; esac
